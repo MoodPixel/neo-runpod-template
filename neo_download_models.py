@@ -208,10 +208,49 @@ PROFILES = {
             "output_name": "Qwen-Image-ControlNet-Inpainting.safetensors",
         },
     ],
+
+    "wan_rapid_aio_t2v": [
+        {
+            "repo_id": "Phr00t/WAN2.2-14B-Rapid-AllInOne",
+            "filename": "v10/wan2.2-t2v-rapid-aio-v10-nsfw.safetensors",
+            "folder": "ckpt_bank",
+            "also_link_to": ["diffusion_models"],
+        },
+    ],
+
+    "wan_rapid_aio_i2v": [
+        {
+            "repo_id": "Phr00t/WAN2.2-14B-Rapid-AllInOne",
+            "filename": "v10/wan2.2-i2v-rapid-aio-v10-nsfw.safetensors",
+            "folder": "ckpt_bank",
+            "also_link_to": ["diffusion_models"],
+        },
+    ],
+
+    "wan_rapid_aio": [
+        {
+            "repo_id": "Phr00t/WAN2.2-14B-Rapid-AllInOne",
+            "filename": "v10/wan2.2-t2v-rapid-aio-v10-nsfw.safetensors",
+            "folder": "ckpt_bank",
+            "also_link_to": ["diffusion_models"],
+        },
+        {
+            "repo_id": "Phr00t/WAN2.2-14B-Rapid-AllInOne",
+            "filename": "v10/wan2.2-i2v-rapid-aio-v10-nsfw.safetensors",
+            "folder": "ckpt_bank",
+            "also_link_to": ["diffusion_models"],
+        },
+    ],
 }
 
 PROFILES["video_core"] = (
     PROFILES["wan22_i2v"]
+    + PROFILES["ltx23"]
+    + PROFILES["seedvr2_quality"]
+)
+
+PROFILES["rapid_video_core"] = (
+    PROFILES["wan_rapid_aio"]
     + PROFILES["ltx23"]
     + PROFILES["seedvr2_quality"]
 )
@@ -225,6 +264,7 @@ PROFILES["image_core"] = (
 
 PROFILES["all"] = (
     PROFILES["video_core"]
+    + PROFILES["rapid_video_core"]
     + PROFILES["image_core"]
 )
 
@@ -245,6 +285,7 @@ def ensure_base():
         target.write_text(YAML_TEXT)
         print(f"Neo: wrote {target}")
         ensure_seedvr2_symlink()
+        ensure_res4lyf_custom_node()
     else:
         print("Neo warning: /workspace/ComfyUI does not exist yet.")
 
@@ -282,6 +323,57 @@ def ensure_seedvr2_symlink():
 
     seedvr2_path.symlink_to(seedvr2_real, target_is_directory=True)
     print(f"Neo: linked {seedvr2_path} -> {seedvr2_real}")
+
+
+def run_command(command, cwd=None, fatal=False):
+    print(f"Neo: running command: {' '.join(command)}")
+    result = subprocess.run(command, cwd=str(cwd) if cwd else None)
+    if result.returncode != 0:
+        message = f"Neo warning: command failed with exit code {result.returncode}: {' '.join(command)}"
+        if fatal:
+            raise RuntimeError(message)
+        print(message)
+    return result.returncode
+
+
+def ensure_res4lyf_custom_node():
+    install_flag = os.environ.get("INSTALL_RES4LYF", "1").strip().lower()
+    if install_flag in {"0", "false", "no", "off"}:
+        print("Neo: INSTALL_RES4LYF disabled, skipping RES4LYF install")
+        return
+
+    if not COMFY_ROOT.exists():
+        print("Neo warning: ComfyUI root missing, cannot install RES4LYF yet.")
+        return
+
+    custom_nodes_dir = COMFY_ROOT / "custom_nodes"
+    custom_nodes_dir.mkdir(parents=True, exist_ok=True)
+
+    target = custom_nodes_dir / "RES4LYF"
+    repo_url = "https://github.com/ClownsharkBatwing/RES4LYF.git"
+
+    print("--------------------------------------")
+    print("Neo: ensuring custom node RES4LYF")
+    print(f"repo: {repo_url}")
+    print(f"path: {target}")
+    print("--------------------------------------")
+
+    if (target / ".git").exists():
+        run_command(["git", "-C", str(target), "pull", "--ff-only"], fatal=False)
+    elif target.exists():
+        print(f"Neo warning: {target} exists but is not a git repo. Leaving it untouched.")
+    else:
+        run_command(["git", "clone", "--depth", "1", repo_url, str(target)], fatal=False)
+
+    requirements = target / "requirements.txt"
+    if requirements.exists():
+        run_command(
+            ["/opt/venv/bin/python", "-m", "pip", "install", "-r", str(requirements)],
+            fatal=False,
+        )
+    else:
+        print("Neo: RES4LYF requirements.txt not found, skipping pip install.")
+
 
 
 def ensure_hf_tools():
