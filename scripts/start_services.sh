@@ -119,8 +119,10 @@ tail_pid="$!"
 
 # Exit when the first managed service exits. This makes RunPod show a failed pod
 # instead of hiding a dead Neo/Comfy process behind a still-running tail.
+set +e
 wait -n "${pids[@]}"
 status="$?"
+set -e
 kill "$tail_pid" 2>/dev/null || true
 shutdown
 exit "$status"
