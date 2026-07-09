@@ -26,6 +26,16 @@ MODEL_DOWNLOADER_PORT="${MODEL_DOWNLOADER_PORT:-7861}"
 mkdir -p /workspace/logs /workspace/neo-models/text
 
 pids=()
+shutdown_pids=()
+
+remember_pid() {
+  local pid="$1"
+  local critical="${2:-1}"
+  shutdown_pids+=("$pid")
+  if [[ "$critical" == "1" ]]; then
+    pids+=("$pid")
+  fi
+}
 
 write_kobold_status() {
   local state="$1"
@@ -70,7 +80,7 @@ start_comfy() {
       --preview-method "$COMFY_PREVIEW_METHOD" \
       ${COMFY_EXTRA_ARGS:-}
   ) > /workspace/logs/comfyui.log 2>&1 &
-  pids+=("$!")
+  remember_pid "$!" 1
 }
 
 start_kobold() {
@@ -101,7 +111,7 @@ start_kobold() {
     ${KOBOLD_EXTRA_ARGS:-${KOBOLDCPP_EXTRA_ARGS:-}} \
     > /workspace/logs/koboldcpp.log 2>&1 &
   local kobold_pid="$!"
-  pids+=("$kobold_pid")
+  remember_pid "$kobold_pid" 1
   write_kobold_status "started" "pid=$kobold_pid"
 }
 
@@ -118,7 +128,12 @@ start_model_downloader() {
   log "Starting model downloader on ${MODEL_DOWNLOADER_HOST}:${MODEL_DOWNLOADER_PORT}"
   python /opt/neo-runpod/scripts/model_downloader_server.py \
     > /workspace/logs/model_downloader.log 2>&1 &
-  pids+=("$!")
+  local downloader_pid="$!"
+  if [[ "${MODEL_DOWNLOADER_SUPERVISED:-0}" == "1" || "${MODEL_DOWNLOADER_STRICT:-0}" == "1" ]]; then
+    remember_pid "$downloader_pid" 1
+  else
+    remember_pid "$downloader_pid" 0
+  fi
 }
 
 start_neo() {
@@ -143,12 +158,12 @@ start_neo() {
       --port "$NEO_PORT" \
       ${NEO_EXTRA_ARGS:-}
   ) > /workspace/logs/neo_studio.log 2>&1 &
-  pids+=("$!")
+  remember_pid "$!" 1
 }
 
 shutdown() {
   log "Shutdown requested; stopping services"
-  for pid in "${pids[@]:-}"; do
+  for pid in "${shutdown_pids[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
   wait || true
@@ -161,7 +176,7 @@ start_model_downloader
 start_neo
 
 if [[ "${#pids[@]}" -eq 0 ]]; then
-  log "No services started. Check START_NEO / START_COMFY / START_KOBOLD / START_MODEL_DOWNLOADER and install logs."
+  log "No critical services started. Check START_NEO / START_COMFY / START_KOBOLD and install logs."
   exit 1
 fi
 
@@ -176,8 +191,8 @@ fi
 tail -n +1 -F /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/model_downloader.log /workspace/logs/neo_studio.log &
 tail_pid="$!"
 
-# Exit when the first managed service exits. This makes RunPod show a failed pod
-# instead of hiding a dead Neo/Comfy process behind a still-running tail.
+# Exit when the first critical managed service exits. Optional services are killed
+# during shutdown but do not take down Neo + Comfy by themselves.
 set +e
 wait -n "${pids[@]}"
 status="$?"
