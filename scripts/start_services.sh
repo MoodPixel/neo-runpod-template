@@ -149,6 +149,11 @@ fi
 log "Service logs: /workspace/logs"
 touch /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/neo_studio.log
 
+if [[ "${RUN_STARTUP_HEALTHCHECK:-0}" == "1" && -x /opt/neo-runpod/scripts/wait_for_services.sh ]]; then
+  log "Running startup readiness check in background"
+  /opt/neo-runpod/scripts/wait_for_services.sh > /workspace/logs/startup_healthcheck.log 2>&1 &
+fi
+
 tail -n +1 -F /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/neo_studio.log &
 tail_pid="$!"
 
