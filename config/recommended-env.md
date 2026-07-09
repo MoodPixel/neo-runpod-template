@@ -17,6 +17,7 @@ COMFY_ROOT=/workspace/ComfyUI
 MODEL_ROOT=/workspace/neo-models
 MODEL_PROFILE=none
 HF_TOKEN=
+CIVITAI_TOKEN=
 
 # Service toggles
 START_NEO=1
@@ -25,6 +26,7 @@ START_KOBOLD=0
 INSTALL_KOBOLD=0
 KOBOLD_MODE=optional
 KOBOLD_STRICT=0
+START_MODEL_DOWNLOADER=1
 INSTALL_CUSTOM_NODES=1
 INSTALL_NEO_MEMORY=1
 
@@ -35,6 +37,16 @@ NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001
 NEO_IMAGE_PROFILE_ID=comfyui_local
 NEO_VIDEO_PROFILE_ID=video.comfyui
 NEO_TEXT_PROFILE_ID=local_koboldcpp_text
+
+# On-demand model downloader
+MODEL_DOWNLOADER_HOST=0.0.0.0
+MODEL_DOWNLOADER_PORT=7861
+MODEL_DOWNLOADER_TOKEN=
+MODEL_DOWNLOADER_STRICT=0
+MODEL_DOWNLOADER_SUPERVISED=0
+MODEL_DOWNLOADER_ALLOW_ANY_EXTENSION=0
+MODEL_DOWNLOADER_OVERWRITE=0
+MODEL_CATEGORY_MANIFEST=/opt/neo-runpod/config/model-download-categories.tsv
 
 # Comfy custom-node hardening
 COMFY_NODE_GROUPS=core,image,video,finish
@@ -127,6 +139,93 @@ Disable runtime profile patching only for debugging:
 
 ```bash
 NEO_PATCH_PROFILES=0
+```
+
+## On-demand model downloader
+
+Phase F adds a separate template-owned downloader UI/API on port `7861`:
+
+```text
+http://<pod-host>:7861
+```
+
+The service is started by default:
+
+```bash
+START_MODEL_DOWNLOADER=1
+MODEL_DOWNLOADER_PORT=7861
+```
+
+It writes only under the shared model bank:
+
+```text
+/workspace/neo-models
+```
+
+The category dropdown is driven by:
+
+```text
+/opt/neo-runpod/config/model-download-categories.tsv
+```
+
+Common mappings:
+
+```text
+checkpoints      -> /workspace/neo-models/ckpt_bank
+loras            -> /workspace/neo-models/loras
+vae              -> /workspace/neo-models/vae
+controlnet       -> /workspace/neo-models/controlnet
+text_gguf        -> /workspace/neo-models/text
+upscale_models   -> /workspace/neo-models/upscale_models
+```
+
+Supported source style:
+
+```text
+Hugging Face direct file URLs
+CivitAI download URLs
+GitHub release/direct URLs
+Any direct http/https model file URL
+```
+
+Auth tokens:
+
+```bash
+HF_TOKEN=          # sent to huggingface.co URLs
+CIVITAI_TOKEN=     # sent to civitai.com URLs
+MODEL_DOWNLOADER_AUTH_HEADER=
+```
+
+If you expose port `7861`, set a UI/API token:
+
+```bash
+MODEL_DOWNLOADER_TOKEN=your-private-token
+```
+
+The downloader blocks unknown file extensions by default. To allow unusual file names/extensions:
+
+```bash
+MODEL_DOWNLOADER_ALLOW_ANY_EXTENSION=1
+```
+
+Downloader job log:
+
+```text
+/workspace/logs/model_downloader_jobs.jsonl
+/workspace/logs/model_downloader.log
+```
+
+By default, the downloader is not a critical supervised service. If it crashes, Neo + Comfy should keep running:
+
+```bash
+MODEL_DOWNLOADER_SUPERVISED=0
+```
+
+Make it critical only when intentionally validating the downloader:
+
+```bash
+MODEL_DOWNLOADER_SUPERVISED=1
+MODEL_DOWNLOADER_STRICT=1
 ```
 
 ## Comfy custom-node hardening
@@ -282,6 +381,7 @@ ComfyUI /system_stats when START_COMFY=1
 Optional unless strict/required:
 
 ```text
+Model downloader /health
 KoboldCPP lane
 Comfy custom-node manifest check
 Comfy /object_info check
@@ -318,9 +418,10 @@ This runs in the background and writes:
 Inside the pod, Neo talks to local services through localhost-compatible URLs:
 
 ```text
-Neo Studio:  http://127.0.0.1:7860
-ComfyUI:     http://127.0.0.1:8188
-KoboldCPP:   http://127.0.0.1:5001
+Neo Studio:        http://127.0.0.1:7860
+Model Downloader: http://127.0.0.1:7861
+ComfyUI:           http://127.0.0.1:8188
+KoboldCPP:         http://127.0.0.1:5001
 ```
 
-Expose `7860` for the main Neo Studio UI. Exposing `8188` is useful for debugging ComfyUI directly. Expose `5001` only if you want direct KoboldCPP access.
+Expose `7860` for the main Neo Studio UI. Expose `7861` only when you want the model downloader UI. Expose `8188` only when you want direct ComfyUI debugging. Expose `5001` only if you want direct KoboldCPP access.
