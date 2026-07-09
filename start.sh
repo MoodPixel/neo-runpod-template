@@ -10,6 +10,16 @@ export COMFY_ROOT="${COMFY_ROOT:-/workspace/ComfyUI}"
 export MODEL_ROOT="${MODEL_ROOT:-/workspace/neo-models}"
 export KOBOLDCPP_ROOT="${KOBOLDCPP_ROOT:-/workspace/koboldcpp}"
 
+export NEO_HOST="${NEO_HOST:-0.0.0.0}"
+export NEO_PORT="${NEO_PORT:-7860}"
+export COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
+export COMFY_PORT="${COMFY_PORT:-8188}"
+export KOBOLD_HOST="${KOBOLD_HOST:-0.0.0.0}"
+export KOBOLD_PORT="${KOBOLD_PORT:-5001}"
+
+export NEO_COMFY_BASE_URL="${NEO_COMFY_BASE_URL:-http://127.0.0.1:${COMFY_PORT}}"
+export NEO_KOBOLD_BASE_URL="${NEO_KOBOLD_BASE_URL:-http://127.0.0.1:${KOBOLD_PORT}}"
+
 mkdir -p \
   /workspace \
   "$MODEL_ROOT" \
@@ -22,6 +32,8 @@ log "Neo root:    $NEO_ROOT"
 log "Comfy root:  $COMFY_ROOT"
 log "Model root:  $MODEL_ROOT"
 log "Profile:     ${MODEL_PROFILE:-none}"
+log "Comfy URL:   $NEO_COMFY_BASE_URL"
+log "Kobold URL:  $NEO_KOBOLD_BASE_URL"
 
 if [[ "${INSTALL_COMFY:-1}" != "0" ]]; then
   /opt/neo-runpod/scripts/install_comfy.sh
