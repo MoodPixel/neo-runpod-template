@@ -20,6 +20,8 @@ COMFY_PREVIEW_METHOD="${COMFY_PREVIEW_METHOD:-auto}"
 KOBOLD_HOST="${KOBOLD_HOST:-0.0.0.0}"
 KOBOLD_PORT="${KOBOLD_PORT:-5001}"
 KOBOLD_MODE="${KOBOLD_MODE:-optional}"
+MODEL_DOWNLOADER_HOST="${MODEL_DOWNLOADER_HOST:-0.0.0.0}"
+MODEL_DOWNLOADER_PORT="${MODEL_DOWNLOADER_PORT:-7861}"
 
 mkdir -p /workspace/logs /workspace/neo-models/text
 
@@ -103,6 +105,22 @@ start_kobold() {
   write_kobold_status "started" "pid=$kobold_pid"
 }
 
+start_model_downloader() {
+  if [[ "${START_MODEL_DOWNLOADER:-1}" != "1" ]]; then
+    log "START_MODEL_DOWNLOADER=0, skipping model downloader"
+    return
+  fi
+  if [[ ! -f /opt/neo-runpod/scripts/model_downloader_server.py ]]; then
+    log "model_downloader_server.py missing; skipping model downloader"
+    return
+  fi
+
+  log "Starting model downloader on ${MODEL_DOWNLOADER_HOST}:${MODEL_DOWNLOADER_PORT}"
+  python /opt/neo-runpod/scripts/model_downloader_server.py \
+    > /workspace/logs/model_downloader.log 2>&1 &
+  pids+=("$!")
+}
+
 start_neo() {
   if [[ "${START_NEO:-1}" != "1" ]]; then
     log "START_NEO=0, skipping Neo Studio"
@@ -139,22 +157,23 @@ trap shutdown SIGINT SIGTERM
 
 start_comfy
 start_kobold
+start_model_downloader
 start_neo
 
 if [[ "${#pids[@]}" -eq 0 ]]; then
-  log "No services started. Check START_NEO / START_COMFY / START_KOBOLD and install logs."
+  log "No services started. Check START_NEO / START_COMFY / START_KOBOLD / START_MODEL_DOWNLOADER and install logs."
   exit 1
 fi
 
 log "Service logs: /workspace/logs"
-touch /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/neo_studio.log
+touch /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/model_downloader.log /workspace/logs/neo_studio.log
 
 if [[ "${RUN_STARTUP_HEALTHCHECK:-0}" == "1" && -x /opt/neo-runpod/scripts/wait_for_services.sh ]]; then
   log "Running startup readiness check in background"
   /opt/neo-runpod/scripts/wait_for_services.sh > /workspace/logs/startup_healthcheck.log 2>&1 &
 fi
 
-tail -n +1 -F /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/neo_studio.log &
+tail -n +1 -F /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/model_downloader.log /workspace/logs/neo_studio.log &
 tail_pid="$!"
 
 # Exit when the first managed service exits. This makes RunPod show a failed pod
