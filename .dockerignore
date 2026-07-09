@@ -1,0 +1,46 @@
+# Git / editor noise
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime state should live on /workspace at pod runtime, not in the image context.
+neo_data/
+workspace/
+models/
+checkpoints/
+outputs/
+logs/
+*.log
+*.tmp
+
+# Large archives / local builds
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.gguf
