@@ -4,6 +4,7 @@ set -Eeuo pipefail
 NEO_PORT="${NEO_PORT:-7860}"
 COMFY_PORT="${COMFY_PORT:-8188}"
 KOBOLD_PORT="${KOBOLD_PORT:-5001}"
+MODEL_DOWNLOADER_PORT="${MODEL_DOWNLOADER_PORT:-7861}"
 HEALTHCHECK_TIMEOUT="${HEALTHCHECK_TIMEOUT:-5}"
 HEALTH_REPORT_FILE="${HEALTH_REPORT_FILE:-/workspace/logs/healthcheck.tsv}"
 HEALTH_SUMMARY_FILE="${HEALTH_SUMMARY_FILE:-/workspace/logs/healthcheck_summary.env}"
@@ -98,6 +99,17 @@ if [[ "${START_COMFY:-1}" == "1" ]]; then
   fi
 else
   record "comfy" "system_stats" "skipped" "optional" "START_COMFY=0"
+fi
+
+# Model downloader is useful but can be disabled/hidden when not needed.
+if [[ "${START_MODEL_DOWNLOADER:-1}" == "1" ]]; then
+  model_downloader_severity="optional"
+  if [[ "${MODEL_DOWNLOADER_STRICT:-0}" == "1" ]]; then
+    model_downloader_severity="required"
+  fi
+  check_http "model_downloader" "health" "http://127.0.0.1:${MODEL_DOWNLOADER_PORT}/health" "$model_downloader_severity" || true
+else
+  record "model_downloader" "health" "skipped" "optional" "START_MODEL_DOWNLOADER=0"
 fi
 
 # KoboldCPP is optional unless the user marks it required/strict.
