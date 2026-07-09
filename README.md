@@ -37,7 +37,7 @@ Expose port `7860` in RunPod for the Neo Studio UI. Expose `8188` only when you 
 ## Build
 
 ```bash
-docker build -t neo-studio-runpod:phase-a .
+docker build -t neo-studio-runpod:phase-b .
 ```
 
 ## Local run smoke test
@@ -48,7 +48,7 @@ docker run --gpus all --rm -it \
   -p 8188:8188 \
   -v neo-workspace:/workspace \
   -e MODEL_PROFILE=none \
-  neo-studio-runpod:phase-a
+  neo-studio-runpod:phase-b
 ```
 
 Open:
@@ -81,9 +81,61 @@ START_NEO=1
 START_COMFY=1
 START_KOBOLD=0
 INSTALL_CUSTOM_NODES=1
+NEO_PATCH_PROFILES=1
 ```
 
 See [`config/recommended-env.md`](config/recommended-env.md) for the full environment contract.
+
+## Runtime backend profile patching
+
+Phase B adds a runtime-only backend profile patcher:
+
+```text
+/opt/neo-runpod/scripts/patch_neo_profiles.py
+```
+
+The patcher runs from `/start.sh` after Neo is installed and before services start. It writes only under:
+
+```text
+/workspace/Neo_Studio_V2/neo_data/settings/backends
+```
+
+It does not edit files inside the Neo source checkout.
+
+Default RunPod mapping:
+
+```text
+image             -> comfyui_local
+video             -> video.comfyui
+text              -> local_koboldcpp_text
+assistant         -> local_koboldcpp_text
+prompt_captioning -> local_koboldcpp_text
+roleplay          -> local_koboldcpp_text
+```
+
+Default backend URLs:
+
+```text
+ComfyUI:   http://127.0.0.1:8188
+KoboldCPP: http://127.0.0.1:5001
+```
+
+Useful overrides:
+
+```bash
+NEO_PATCH_PROFILES=1
+NEO_COMFY_BASE_URL=http://127.0.0.1:8188
+NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001
+NEO_IMAGE_PROFILE_ID=comfyui_local
+NEO_VIDEO_PROFILE_ID=video.comfyui
+NEO_TEXT_PROFILE_ID=local_koboldcpp_text
+```
+
+Disable patching for debugging only:
+
+```bash
+NEO_PATCH_PROFILES=0
+```
 
 ## Model handling
 
@@ -114,19 +166,12 @@ Use `HF_TOKEN` when a Hugging Face model requires authentication.
 
 ## KoboldCPP lane
 
-KoboldCPP is optional in Phase A. To enable it, provide a binary and model path:
+KoboldCPP is optional in Phase B. To enable it, provide a binary and model path:
 
 ```bash
 START_KOBOLD=1
 KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
-```
-
-Or provide a binary download URL:
-
-```bash
-INSTALL_KOBOLD=1
-KOBOLDCPP_URL=https://example.com/koboldcpp-linux-x64
 ```
 
 If KoboldCPP is not available, the pod still starts Neo Studio and ComfyUI. Neo text surfaces will show backend-disconnected diagnostics until a text backend is connected.
@@ -149,7 +194,7 @@ Healthcheck helper:
 
 ## Current phase
 
-This is **Phase A**: real pod-template shell.
+This is **Phase B**: runtime backend-profile patching.
 
 Included:
 
@@ -163,11 +208,9 @@ Included:
 - healthcheck helper
 - recommended environment docs
 - Docker ignore rules
+- runtime-only Neo backend profile patcher
 
 Deferred to later phases:
 
-- Runtime backend-profile patching for Linux pod defaults
 - Deeper RunPod image-size optimization
-- pinned release tags / lockfile strategy
-- automated CI build validation
-- optional prebuilt image publishing
+- Full container build/test validation on GPU hardware
