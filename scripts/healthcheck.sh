@@ -27,7 +27,16 @@ if [[ "${START_COMFY:-1}" == "1" ]]; then
 fi
 
 if [[ "${START_KOBOLD:-0}" == "1" ]]; then
-  check "koboldcpp" "http://127.0.0.1:${KOBOLD_PORT}/v1/models"
+  if [[ "${CHECK_KOBOLDCPP_LANE:-1}" == "1" && -x /opt/neo-runpod/scripts/check_koboldcpp.sh ]]; then
+    if /opt/neo-runpod/scripts/check_koboldcpp.sh; then
+      printf '[healthcheck] koboldcpp lane check ok\n'
+    else
+      printf '[healthcheck] koboldcpp lane check failed\n'
+      status=1
+    fi
+  else
+    check "koboldcpp" "http://127.0.0.1:${KOBOLD_PORT}/v1/models"
+  fi
 fi
 
 if [[ "${CHECK_COMFY_NODES:-0}" == "1" && -x /opt/neo-runpod/scripts/check_comfy_nodes.sh ]]; then
