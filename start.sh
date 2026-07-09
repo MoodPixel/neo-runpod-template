@@ -28,12 +28,14 @@ mkdir -p \
   /workspace/tmp
 
 log "Neo RunPod template starting"
-log "Neo root:    $NEO_ROOT"
-log "Comfy root:  $COMFY_ROOT"
-log "Model root:  $MODEL_ROOT"
-log "Profile:     ${MODEL_PROFILE:-none}"
-log "Comfy URL:   $NEO_COMFY_BASE_URL"
-log "Kobold URL:  $NEO_KOBOLD_BASE_URL"
+log "Neo root:       $NEO_ROOT"
+log "Comfy root:     $COMFY_ROOT"
+log "Model root:     $MODEL_ROOT"
+log "Profile:        ${MODEL_PROFILE:-none}"
+log "Comfy URL:      $NEO_COMFY_BASE_URL"
+log "Kobold URL:     $NEO_KOBOLD_BASE_URL"
+log "Comfy nodes:    ${COMFY_NODE_GROUPS:-core,image,video,finish}"
+log "Scene Director: ${NEO_SCENE_DIRECTOR_MODE:-symlink}"
 
 if [[ "${INSTALL_COMFY:-1}" != "0" ]]; then
   /opt/neo-runpod/scripts/install_comfy.sh
