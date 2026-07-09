@@ -37,7 +37,7 @@ Expose port `7860` in RunPod for the Neo Studio UI. Expose `8188` only when you 
 ## Build
 
 ```bash
-docker build -t neo-studio-runpod:phase-d .
+docker build -t neo-studio-runpod:phase-e .
 ```
 
 ## Local run smoke test
@@ -48,7 +48,7 @@ docker run --gpus all --rm -it \
   -p 8188:8188 \
   -v neo-workspace:/workspace \
   -e MODEL_PROFILE=none \
-  neo-studio-runpod:phase-d
+  neo-studio-runpod:phase-e
 ```
 
 Open:
@@ -310,6 +310,73 @@ Checker:
 /opt/neo-runpod/scripts/check_koboldcpp.sh
 ```
 
+## Health checks and readiness
+
+Phase E adds a richer diagnostics layer:
+
+```bash
+/opt/neo-runpod/scripts/healthcheck.sh
+/opt/neo-runpod/scripts/wait_for_services.sh
+```
+
+`healthcheck.sh` checks the enabled services and writes:
+
+```text
+/workspace/logs/healthcheck.tsv
+/workspace/logs/healthcheck_summary.env
+```
+
+Required checks by default:
+
+```text
+Neo Studio /api/health when START_NEO=1
+ComfyUI /system_stats when START_COMFY=1
+```
+
+Optional checks:
+
+```text
+KoboldCPP lane when START_KOBOLD=1 and KOBOLD_MODE=optional
+Comfy custom-node manifest when CHECK_COMFY_NODES=1
+Comfy /object_info when CHECK_COMFY_OBJECT_INFO=1
+```
+
+Useful commands:
+
+```bash
+/opt/neo-runpod/scripts/healthcheck.sh
+/opt/neo-runpod/scripts/wait_for_services.sh
+```
+
+Strict health mode:
+
+```bash
+HEALTHCHECK_STRICT=1
+COMFY_NODES_STRICT=1
+KOBOLD_MODE=required
+```
+
+Startup readiness loop is disabled by default to avoid blocking logs during slow first boot/model setup:
+
+```bash
+RUN_STARTUP_HEALTHCHECK=0
+```
+
+Enable it when validating a pod:
+
+```bash
+RUN_STARTUP_HEALTHCHECK=1
+HEALTH_WAIT_TIMEOUT_SECONDS=300
+HEALTH_WAIT_INTERVAL_SECONDS=5
+```
+
+Startup readiness logs:
+
+```text
+/workspace/logs/startup_healthcheck.log
+/workspace/logs/wait_for_services.log
+```
+
 ## Service logs
 
 Logs are written to:
@@ -323,17 +390,14 @@ Logs are written to:
 /workspace/logs/koboldcpp_status.env
 /workspace/logs/koboldcpp_runtime_status.env
 /workspace/logs/koboldcpp_check.tsv
-```
-
-Healthcheck helper:
-
-```bash
-/opt/neo-runpod/scripts/healthcheck.sh
+/workspace/logs/healthcheck.tsv
+/workspace/logs/healthcheck_summary.env
+/workspace/logs/wait_for_services.log
 ```
 
 ## Current phase
 
-This is **Phase D**: KoboldCPP optional lane.
+This is **Phase E**: health checks and readiness diagnostics.
 
 Included:
 
@@ -347,8 +411,10 @@ Included:
 - Neo Scene Director sync/link into ComfyUI custom_nodes
 - Comfy node audit helper
 - KoboldCPP lane checker
+- richer healthcheck helper
+- readiness wait helper
+- optional startup readiness loop
 - multi-service launcher
-- healthcheck helper
 - recommended environment docs
 - Docker ignore rules
 - runtime-only Neo backend profile patcher
