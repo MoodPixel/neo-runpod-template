@@ -37,7 +37,7 @@ Expose port `7860` in RunPod for the Neo Studio UI. Expose `8188` only when you 
 ## Build
 
 ```bash
-docker build -t neo-studio-runpod:phase-b .
+docker build -t neo-studio-runpod:phase-c .
 ```
 
 ## Local run smoke test
@@ -48,7 +48,7 @@ docker run --gpus all --rm -it \
   -p 8188:8188 \
   -v neo-workspace:/workspace \
   -e MODEL_PROFILE=none \
-  neo-studio-runpod:phase-b
+  neo-studio-runpod:phase-c
 ```
 
 Open:
@@ -82,6 +82,8 @@ START_COMFY=1
 START_KOBOLD=0
 INSTALL_CUSTOM_NODES=1
 NEO_PATCH_PROFILES=1
+COMFY_NODE_GROUPS=core,image,video,finish
+NEO_SCENE_DIRECTOR_MODE=symlink
 ```
 
 See [`config/recommended-env.md`](config/recommended-env.md) for the full environment contract.
@@ -137,6 +139,92 @@ Disable patching for debugging only:
 NEO_PATCH_PROFILES=0
 ```
 
+## Comfy custom-node hardening
+
+Phase C hardens Comfy setup around Neo's recommended custom-node list.
+
+The third-party node contract lives in:
+
+```text
+/opt/neo-runpod/config/comfy-node-manifest.tsv
+```
+
+The installer is:
+
+```text
+/opt/neo-runpod/scripts/install_custom_nodes.sh
+```
+
+It installs the manifest groups enabled by:
+
+```bash
+COMFY_NODE_GROUPS=core,image,video,finish
+```
+
+Useful smaller modes:
+
+```bash
+COMFY_NODE_GROUPS=core,image
+COMFY_NODE_GROUPS=core,video
+```
+
+Install behavior:
+
+```bash
+INSTALL_CUSTOM_NODE_REQUIREMENTS=1
+RUN_CUSTOM_NODE_INSTALLERS=0
+COMFY_NODES_STRICT=0
+```
+
+`RUN_CUSTOM_NODE_INSTALLERS` stays disabled by default because `install.py` files are third-party executable code. Requirements are installed by default because most Comfy custom nodes need them to import correctly.
+
+### Neo Scene Director custom node
+
+Neo Studio's main repository contains a root-level Comfy node folder:
+
+```text
+/workspace/Neo_Studio_V2/neo_scene_director
+```
+
+The Phase C template links it into:
+
+```text
+/workspace/ComfyUI/custom_nodes/neo_scene_director
+```
+
+Default mode:
+
+```bash
+NEO_SCENE_DIRECTOR_MODE=symlink
+```
+
+This keeps Comfy using the current Neo checkout copy without duplicating or modifying the Neo source. Alternatives:
+
+```bash
+NEO_SCENE_DIRECTOR_MODE=copy
+NEO_SCENE_DIRECTOR_MODE=skip
+```
+
+### Node audit reports
+
+The installer writes:
+
+```text
+/workspace/logs/comfy_nodes_status.tsv
+```
+
+A separate checker is available:
+
+```bash
+/opt/neo-runpod/scripts/check_comfy_nodes.sh
+```
+
+Enable it inside the healthcheck only when needed:
+
+```bash
+CHECK_COMFY_NODES=1
+```
+
 ## Model handling
 
 `neo_download_models.py` prepares Comfy model folders under:
@@ -166,7 +254,7 @@ Use `HF_TOKEN` when a Hugging Face model requires authentication.
 
 ## KoboldCPP lane
 
-KoboldCPP is optional in Phase B. To enable it, provide a binary and model path:
+KoboldCPP is optional in Phase C. To enable it, provide a binary and model path:
 
 ```bash
 START_KOBOLD=1
@@ -184,6 +272,8 @@ Logs are written to:
 /workspace/logs/neo_studio.log
 /workspace/logs/comfyui.log
 /workspace/logs/koboldcpp.log
+/workspace/logs/comfy_nodes_status.tsv
+/workspace/logs/comfy_nodes_check.tsv
 ```
 
 Healthcheck helper:
@@ -194,7 +284,7 @@ Healthcheck helper:
 
 ## Current phase
 
-This is **Phase B**: runtime backend-profile patching.
+This is **Phase C**: Comfy hardening.
 
 Included:
 
@@ -203,7 +293,10 @@ Included:
 - ComfyUI installer
 - Neo Studio installer
 - optional KoboldCPP installer
-- custom-node installer
+- manifest-driven custom-node installer
+- Comfy node manifest
+- Neo Scene Director sync/link into ComfyUI custom_nodes
+- Comfy node audit helper
 - multi-service launcher
 - healthcheck helper
 - recommended environment docs
