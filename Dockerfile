@@ -78,11 +78,8 @@ ENV NEO_REPO=https://github.com/MoodPixel/Neo_Studio_V2.git \
     KOBOLD_PORT=5001 \
     KOBOLDCPP_ROOT=/workspace/koboldcpp \
     KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64 \
-    KOBOLDCPP_URL= \
-    KOBOLDCPP_SHA256= \
     KOBOLD_MODEL=/workspace/neo-models/text/model.gguf \
-    KOBOLD_TIMEOUT_SECONDS=300 \
-    KOBOLD_EXTRA_ARGS=
+    KOBOLD_TIMEOUT_SECONDS=300
 
 EXPOSE 7860 8188 5001
 
