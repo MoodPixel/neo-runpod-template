@@ -16,6 +16,8 @@ export COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
 export COMFY_PORT="${COMFY_PORT:-8188}"
 export KOBOLD_HOST="${KOBOLD_HOST:-0.0.0.0}"
 export KOBOLD_PORT="${KOBOLD_PORT:-5001}"
+export MODEL_DOWNLOADER_HOST="${MODEL_DOWNLOADER_HOST:-0.0.0.0}"
+export MODEL_DOWNLOADER_PORT="${MODEL_DOWNLOADER_PORT:-7861}"
 
 export NEO_COMFY_BASE_URL="${NEO_COMFY_BASE_URL:-http://127.0.0.1:${COMFY_PORT}}"
 export NEO_KOBOLD_BASE_URL="${NEO_KOBOLD_BASE_URL:-http://127.0.0.1:${KOBOLD_PORT}}"
@@ -28,17 +30,18 @@ mkdir -p \
   /workspace/tmp
 
 log "Neo RunPod template starting"
-log "Neo root:       $NEO_ROOT"
-log "Comfy root:     $COMFY_ROOT"
-log "Model root:     $MODEL_ROOT"
-log "Profile:        ${MODEL_PROFILE:-none}"
-log "Comfy URL:      $NEO_COMFY_BASE_URL"
-log "Kobold URL:     $NEO_KOBOLD_BASE_URL"
-log "Kobold mode:    ${KOBOLD_MODE:-optional} / START_KOBOLD=${START_KOBOLD:-0}"
-log "Kobold binary:  ${KOBOLDCPP_BIN:-$KOBOLDCPP_ROOT/koboldcpp-linux-x64}"
-log "Kobold model:   ${KOBOLD_MODEL:-/workspace/neo-models/text/model.gguf}"
-log "Comfy nodes:    ${COMFY_NODE_GROUPS:-core,image,video,finish}"
-log "Scene Director: ${NEO_SCENE_DIRECTOR_MODE:-symlink}"
+log "Neo root:          $NEO_ROOT"
+log "Comfy root:        $COMFY_ROOT"
+log "Model root:        $MODEL_ROOT"
+log "Profile:           ${MODEL_PROFILE:-none}"
+log "Comfy URL:         $NEO_COMFY_BASE_URL"
+log "Kobold URL:        $NEO_KOBOLD_BASE_URL"
+log "Kobold mode:       ${KOBOLD_MODE:-optional} / START_KOBOLD=${START_KOBOLD:-0}"
+log "Kobold binary:     ${KOBOLDCPP_BIN:-$KOBOLDCPP_ROOT/koboldcpp-linux-x64}"
+log "Kobold model:      ${KOBOLD_MODEL:-/workspace/neo-models/text/model.gguf}"
+log "Model downloader:  ${MODEL_DOWNLOADER_HOST}:${MODEL_DOWNLOADER_PORT} / START_MODEL_DOWNLOADER=${START_MODEL_DOWNLOADER:-1}"
+log "Comfy nodes:       ${COMFY_NODE_GROUPS:-core,image,video,finish}"
+log "Scene Director:    ${NEO_SCENE_DIRECTOR_MODE:-symlink}"
 
 if [[ "${INSTALL_COMFY:-1}" != "0" ]]; then
   /opt/neo-runpod/scripts/install_comfy.sh
