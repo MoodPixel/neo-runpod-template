@@ -26,6 +26,7 @@ FOLDERS = [
     "style_models",
     "motion_models",
     "wildcards",
+    "text",
     "other",
     "SEEDVR2",
 ]
