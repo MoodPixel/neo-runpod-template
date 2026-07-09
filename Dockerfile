@@ -51,6 +51,12 @@ ENV NEO_REPO=https://github.com/MoodPixel/Neo_Studio_V2.git \
     START_KOBOLD=0 \
     INSTALL_CUSTOM_NODES=1 \
     INSTALL_NEO_MEMORY=1 \
+    NEO_PATCH_PROFILES=1 \
+    NEO_COMFY_BASE_URL=http://127.0.0.1:8188 \
+    NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001 \
+    NEO_IMAGE_PROFILE_ID=comfyui_local \
+    NEO_VIDEO_PROFILE_ID=video.comfyui \
+    NEO_TEXT_PROFILE_ID=local_koboldcpp_text \
     AUTO_UPDATE_NEO=0 \
     AUTO_UPDATE_COMFY=0 \
     NEO_HOST=0.0.0.0 \
@@ -62,7 +68,8 @@ ENV NEO_REPO=https://github.com/MoodPixel/Neo_Studio_V2.git \
     KOBOLD_PORT=5001 \
     KOBOLDCPP_ROOT=/workspace/koboldcpp \
     KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64 \
-    KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
+    KOBOLD_MODEL=/workspace/neo-models/text/model.gguf \
+    KOBOLD_TIMEOUT_SECONDS=300
 
 EXPOSE 7860 8188 5001
 
