@@ -1,0 +1,24 @@
+# Neo Studio recommended ComfyUI custom nodes.
+# Format: name<TAB>git_url<TAB>groups<TAB>required
+# groups: core,image,video,finish
+# required: yes/no. The installer logs failures but does not stop pod boot unless COMFY_NODES_STRICT=1.
+comfyui-essentials	https://github.com/comfyorg/comfyui-essentials.git	core,image,video	yes
+ComfyUI-GGUF	https://github.com/city96/ComfyUI-GGUF.git	core,image,video	yes
+gguf	https://github.com/calcuis/gguf.git	core,image,video	no
+ComfyUI-Impact-Pack	https://github.com/ltdrdata/ComfyUI-Impact-Pack.git	image,finish	no
+ComfyUI-Impact-Subpack	https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git	image,finish	no
+ComfyUI-Inspire-Pack	https://github.com/ltdrdata/ComfyUI-Inspire-Pack.git	image,video	no
+ComfyUI-KJNodes	https://github.com/kijai/ComfyUI-KJNodes.git	image,video	yes
+comfyui_controlnet_aux	https://github.com/Fannovel16/comfyui_controlnet_aux.git	image,video	yes
+ComfyUI_IPAdapter_plus	https://github.com/cubiq/ComfyUI_IPAdapter_plus.git	image	yes
+ComfyUI_UltimateSDUpscale	https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git	image,finish	no
+sd-dynamic-thresholding	https://github.com/mcmonkeyprojects/sd-dynamic-thresholding.git	image	no
+RES4LYF	https://github.com/ClownsharkBatwing/RES4LYF.git	image,video	no
+rgthree-comfy	https://github.com/rgthree/rgthree-comfy.git	core,image,video	no
+facerestore_cf	https://github.com/mav-rik/facerestore_cf.git	image,finish	no
+ComfyUI-WanVideoWrapper	https://github.com/kijai/ComfyUI-WanVideoWrapper.git	video	yes
+ComfyUI-TeaCache	https://github.com/welltop-cn/ComfyUI-TeaCache.git	video	no
+ComfyUI-LTXVideo	https://github.com/Lightricks/ComfyUI-LTXVideo.git	video	yes
+ComfyUI-Frame-Interpolation	https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git	video,finish	no
+ComfyUI-VideoHelperSuite	https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git	video	yes
+ComfyUI-SeedVR2_VideoUpscaler	https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git	video,finish	no
