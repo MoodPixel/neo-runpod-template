@@ -25,6 +25,14 @@ START_KOBOLD=0
 INSTALL_CUSTOM_NODES=1
 INSTALL_NEO_MEMORY=1
 
+# Runtime backend-profile patching
+NEO_PATCH_PROFILES=1
+NEO_COMFY_BASE_URL=http://127.0.0.1:8188
+NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001
+NEO_IMAGE_PROFILE_ID=comfyui_local
+NEO_VIDEO_PROFILE_ID=video.comfyui
+NEO_TEXT_PROFILE_ID=local_koboldcpp_text
+
 # Update policy. Keep disabled for reproducible pods.
 AUTO_UPDATE_NEO=0
 AUTO_UPDATE_COMFY=0
@@ -44,6 +52,7 @@ KOBOLDCPP_ROOT=/workspace/koboldcpp
 KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
 KOBOLDCPP_URL=
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
+KOBOLD_TIMEOUT_SECONDS=300
 ```
 
 ## Model profiles
@@ -61,6 +70,40 @@ MODEL_PROFILE=all
 ```
 
 Use `HF_TOKEN` when a model requires Hugging Face authentication.
+
+## Backend profile patching
+
+`NEO_PATCH_PROFILES=1` is enabled by default. The patcher writes runtime-only files under:
+
+```text
+/workspace/Neo_Studio_V2/neo_data/settings/backends
+```
+
+It does **not** edit the Neo Studio source checkout.
+
+Default runtime mapping:
+
+```text
+image             -> comfyui_local
+video             -> video.comfyui
+text              -> local_koboldcpp_text
+assistant         -> local_koboldcpp_text
+prompt_captioning -> local_koboldcpp_text
+roleplay          -> local_koboldcpp_text
+```
+
+Override URLs when services run elsewhere:
+
+```bash
+NEO_COMFY_BASE_URL=http://127.0.0.1:8188
+NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001
+```
+
+Disable runtime profile patching only for debugging:
+
+```bash
+NEO_PATCH_PROFILES=0
+```
 
 ## Port notes
 
