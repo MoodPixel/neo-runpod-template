@@ -37,7 +37,7 @@ Expose port `7860` in RunPod for the Neo Studio UI. Expose `8188` only when you 
 ## Build
 
 ```bash
-docker build -t neo-studio-runpod:phase-c .
+docker build -t neo-studio-runpod:phase-d .
 ```
 
 ## Local run smoke test
@@ -48,7 +48,7 @@ docker run --gpus all --rm -it \
   -p 8188:8188 \
   -v neo-workspace:/workspace \
   -e MODEL_PROFILE=none \
-  neo-studio-runpod:phase-c
+  neo-studio-runpod:phase-d
 ```
 
 Open:
@@ -84,6 +84,7 @@ INSTALL_CUSTOM_NODES=1
 NEO_PATCH_PROFILES=1
 COMFY_NODE_GROUPS=core,image,video,finish
 NEO_SCENE_DIRECTOR_MODE=symlink
+KOBOLD_MODE=optional
 ```
 
 See [`config/recommended-env.md`](config/recommended-env.md) for the full environment contract.
@@ -252,9 +253,18 @@ MODEL_PROFILE=all
 
 Use `HF_TOKEN` when a Hugging Face model requires authentication.
 
-## KoboldCPP lane
+## KoboldCPP optional lane
 
-KoboldCPP is optional in Phase C. To enable it, provide a binary and model path:
+Phase D keeps KoboldCPP disabled by default:
+
+```bash
+START_KOBOLD=0
+KOBOLD_MODE=optional
+```
+
+This is intentional. The pod should still start Neo Studio and ComfyUI when no text model exists. Neo text/assistant/roleplay surfaces can show backend-disconnected diagnostics until a text backend is connected.
+
+To enable local text generation, provide both a KoboldCPP executable and a GGUF model:
 
 ```bash
 START_KOBOLD=1
@@ -262,7 +272,43 @@ KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
 ```
 
-If KoboldCPP is not available, the pod still starts Neo Studio and ComfyUI. Neo text surfaces will show backend-disconnected diagnostics until a text backend is connected.
+To download a binary during startup:
+
+```bash
+INSTALL_KOBOLD=1
+KOBOLDCPP_URL=https://example.com/koboldcpp-linux-x64
+KOBOLDCPP_SHA256=
+```
+
+`KOBOLDCPP_SHA256` is optional but recommended when downloading binaries automatically.
+
+To make the lane fail startup/checks when missing:
+
+```bash
+KOBOLD_MODE=required
+# or
+KOBOLD_STRICT=1
+```
+
+Extra launch flags are passed through:
+
+```bash
+KOBOLD_EXTRA_ARGS="--your-flags-here"
+```
+
+Kobold status/check reports:
+
+```text
+/workspace/logs/koboldcpp_status.env
+/workspace/logs/koboldcpp_runtime_status.env
+/workspace/logs/koboldcpp_check.tsv
+```
+
+Checker:
+
+```bash
+/opt/neo-runpod/scripts/check_koboldcpp.sh
+```
 
 ## Service logs
 
@@ -274,6 +320,9 @@ Logs are written to:
 /workspace/logs/koboldcpp.log
 /workspace/logs/comfy_nodes_status.tsv
 /workspace/logs/comfy_nodes_check.tsv
+/workspace/logs/koboldcpp_status.env
+/workspace/logs/koboldcpp_runtime_status.env
+/workspace/logs/koboldcpp_check.tsv
 ```
 
 Healthcheck helper:
@@ -284,7 +333,7 @@ Healthcheck helper:
 
 ## Current phase
 
-This is **Phase C**: Comfy hardening.
+This is **Phase D**: KoboldCPP optional lane.
 
 Included:
 
@@ -292,11 +341,12 @@ Included:
 - `/start.sh` entrypoint
 - ComfyUI installer
 - Neo Studio installer
-- optional KoboldCPP installer
+- hardened optional KoboldCPP installer
 - manifest-driven custom-node installer
 - Comfy node manifest
 - Neo Scene Director sync/link into ComfyUI custom_nodes
 - Comfy node audit helper
+- KoboldCPP lane checker
 - multi-service launcher
 - healthcheck helper
 - recommended environment docs
