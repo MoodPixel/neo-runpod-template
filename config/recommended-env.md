@@ -44,6 +44,16 @@ NEO_SCENE_DIRECTOR_MODE=symlink
 CHECK_COMFY_NODES=0
 COMFY_NODES_STRICT=0
 
+# Health checks and readiness
+HEALTHCHECK_TIMEOUT=5
+HEALTHCHECK_STRICT=0
+CHECK_COMFY_OBJECT_INFO=0
+RUN_STARTUP_HEALTHCHECK=0
+HEALTH_WAIT_TIMEOUT_SECONDS=300
+HEALTH_WAIT_INTERVAL_SECONDS=5
+CHECK_KOBOLDCPP_LANE=1
+CHECK_KOBOLD_API_REQUIRED=0
+
 # Update policy. Keep disabled for reproducible pods.
 AUTO_UPDATE_NEO=0
 AUTO_UPDATE_COMFY=0
@@ -67,8 +77,6 @@ KOBOLDCPP_SHA256=
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
 KOBOLD_TIMEOUT_SECONDS=300
 KOBOLD_EXTRA_ARGS=
-CHECK_KOBOLDCPP_LANE=1
-CHECK_KOBOLD_API_REQUIRED=0
 ```
 
 ## Model profiles
@@ -240,6 +248,69 @@ Kobold lane reports are written under:
 /workspace/logs/koboldcpp_status.env
 /workspace/logs/koboldcpp_runtime_status.env
 /workspace/logs/koboldcpp_check.tsv
+```
+
+## Health checks and readiness
+
+Phase E provides two health layers:
+
+```bash
+/opt/neo-runpod/scripts/healthcheck.sh
+/opt/neo-runpod/scripts/wait_for_services.sh
+```
+
+`healthcheck.sh` checks enabled services and writes:
+
+```text
+/workspace/logs/healthcheck.tsv
+/workspace/logs/healthcheck_summary.env
+```
+
+Default behavior is forgiving:
+
+```bash
+HEALTHCHECK_STRICT=0
+```
+
+Required by default:
+
+```text
+Neo /api/health when START_NEO=1
+ComfyUI /system_stats when START_COMFY=1
+```
+
+Optional unless strict/required:
+
+```text
+KoboldCPP lane
+Comfy custom-node manifest check
+Comfy /object_info check
+```
+
+To run the readiness loop manually:
+
+```bash
+/opt/neo-runpod/scripts/wait_for_services.sh
+```
+
+Readiness loop controls:
+
+```bash
+HEALTH_WAIT_TIMEOUT_SECONDS=300
+HEALTH_WAIT_INTERVAL_SECONDS=5
+```
+
+To run the readiness loop automatically after services start, enable:
+
+```bash
+RUN_STARTUP_HEALTHCHECK=1
+```
+
+This runs in the background and writes:
+
+```text
+/workspace/logs/startup_healthcheck.log
+/workspace/logs/wait_for_services.log
 ```
 
 ## Port notes
