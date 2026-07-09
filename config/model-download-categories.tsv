@@ -1,0 +1,21 @@
+# Neo RunPod model downloader categories.
+# Format: key<TAB>label<TAB>relative_path<TAB>notes
+checkpoints	Checkpoints / SDXL / AIO	ckpt_bank	Main checkpoint bank. Comfy sees this as checkpoints.
+diffusion_models	Diffusion Models	diffusion_models	UNet/diffusion model files used by modern Comfy routes.
+unet	UNet	unet	Alternate UNet folder. Also linked to diffusion_models by extra_model_paths.yaml.
+vae	VAE	vae	VAE model files.
+loras	LoRA / LyCORIS	loras	LoRA files, sliders, adapters, character/style LoRAs.
+controlnet	ControlNet	controlnet	ControlNet and control-lane models.
+clip	CLIP	clip	CLIP/text encoder helper folder.
+text_encoders	Text Encoders	text_encoders	T5/UMT5/Qwen/Flux text encoders.
+clip_vision	CLIP Vision	clip_vision	Vision encoders used by IPAdapter and image reference workflows.
+ipadapter	IPAdapter	ipadapter	IPAdapter model files.
+insightface	InsightFace	insightface	Face/identity helper models.
+upscale_models	Upscale Models	upscale_models	ESRGAN/RealESRGAN/upscalers.
+embeddings	Embeddings / Textual Inversion	embeddings	Textual inversion and embeddings.
+style_models	Style Models	style_models	Style model helpers.
+motion_models	Motion Models	motion_models	AnimateDiff or motion model files.
+seedvr2	SeedVR2	SEEDVR2	SeedVR2 video upscale models.
+wildcards	Wildcards	wildcards	Wildcard text files.
+text_gguf	Text GGUF Models	text	Local LLM GGUF files for KoboldCPP.
+other	Other / Manual	other	Fallback folder for uncategorized model assets.
