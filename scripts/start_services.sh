@@ -98,8 +98,9 @@ start_kobold() {
     --port "$KOBOLD_PORT" \
     ${KOBOLD_EXTRA_ARGS:-${KOBOLDCPP_EXTRA_ARGS:-}} \
     > /workspace/logs/koboldcpp.log 2>&1 &
-  pids+=("$!")
-  write_kobold_status "started" "pid=${pids[-1]}"
+  local kobold_pid="$!"
+  pids+=("$kobold_pid")
+  write_kobold_status "started" "pid=$kobold_pid"
 }
 
 start_neo() {
