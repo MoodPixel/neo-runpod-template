@@ -30,4 +30,13 @@ if [[ "${START_KOBOLD:-0}" == "1" ]]; then
   check "koboldcpp" "http://127.0.0.1:${KOBOLD_PORT}/v1/models"
 fi
 
+if [[ "${CHECK_COMFY_NODES:-0}" == "1" && -x /opt/neo-runpod/scripts/check_comfy_nodes.sh ]]; then
+  if /opt/neo-runpod/scripts/check_comfy_nodes.sh; then
+    printf '[healthcheck] comfy node check ok\n'
+  else
+    printf '[healthcheck] comfy node check failed\n'
+    status=1
+  fi
+fi
+
 exit "$status"
