@@ -5,7 +5,7 @@ NEO_PORT="${NEO_PORT:-7860}"
 COMFY_PORT="${COMFY_PORT:-8188}"
 KOBOLD_PORT="${KOBOLD_PORT:-5001}"
 
-ok=1
+status=0
 
 check() {
   local name="$1"
@@ -14,7 +14,7 @@ check() {
     printf '[healthcheck] %s ok: %s\n' "$name" "$url"
   else
     printf '[healthcheck] %s not ready: %s\n' "$name" "$url"
-    ok=0
+    status=1
   fi
 }
 
@@ -30,4 +30,4 @@ if [[ "${START_KOBOLD:-0}" == "1" ]]; then
   check "koboldcpp" "http://127.0.0.1:${KOBOLD_PORT}/v1/models"
 fi
 
-exit "$ok"
+exit "$status"
