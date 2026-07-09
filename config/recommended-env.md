@@ -22,6 +22,9 @@ HF_TOKEN=
 START_NEO=1
 START_COMFY=1
 START_KOBOLD=0
+INSTALL_KOBOLD=0
+KOBOLD_MODE=optional
+KOBOLD_STRICT=0
 INSTALL_CUSTOM_NODES=1
 INSTALL_NEO_MEMORY=1
 
@@ -60,8 +63,12 @@ KOBOLD_PORT=5001
 KOBOLDCPP_ROOT=/workspace/koboldcpp
 KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
 KOBOLDCPP_URL=
+KOBOLDCPP_SHA256=
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
 KOBOLD_TIMEOUT_SECONDS=300
+KOBOLD_EXTRA_ARGS=
+CHECK_KOBOLDCPP_LANE=1
+CHECK_KOBOLD_API_REQUIRED=0
 ```
 
 ## Model profiles
@@ -176,6 +183,63 @@ Make missing required nodes fail the check only when you want strict validation:
 
 ```bash
 COMFY_NODES_STRICT=1
+```
+
+## KoboldCPP optional text lane
+
+Phase D keeps KoboldCPP disabled by default:
+
+```bash
+START_KOBOLD=0
+```
+
+That means Neo Studio and ComfyUI still boot even when no text model is present. Neo text, assistant, prompt/captioning, and roleplay surfaces will show backend-disconnected diagnostics until a text backend is enabled.
+
+To enable the local text lane, provide both a KoboldCPP executable and a GGUF model:
+
+```bash
+START_KOBOLD=1
+KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
+KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
+```
+
+To download a binary during pod startup instead of mounting one:
+
+```bash
+INSTALL_KOBOLD=1
+KOBOLDCPP_URL=https://example.com/koboldcpp-linux-x64
+KOBOLDCPP_SHA256=
+```
+
+Use `KOBOLDCPP_SHA256` when you want checksum verification for the downloaded binary.
+
+The lane is optional by default:
+
+```bash
+KOBOLD_MODE=optional
+KOBOLD_STRICT=0
+```
+
+To intentionally fail startup/checks when Kobold is missing:
+
+```bash
+KOBOLD_MODE=required
+# or
+KOBOLD_STRICT=1
+```
+
+Pass extra KoboldCPP launch flags through:
+
+```bash
+KOBOLD_EXTRA_ARGS="--your-flags-here"
+```
+
+Kobold lane reports are written under:
+
+```text
+/workspace/logs/koboldcpp_status.env
+/workspace/logs/koboldcpp_runtime_status.env
+/workspace/logs/koboldcpp_check.tsv
 ```
 
 ## Port notes
