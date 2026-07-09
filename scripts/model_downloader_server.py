@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import html
 import json
-import mimetypes
 import os
 import re
-import shutil
 import threading
 import time
 import uuid
@@ -21,7 +19,7 @@ from dataclasses import asdict, dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import Request, urlopen
 
@@ -180,8 +178,10 @@ def filename_from_url(url: str) -> str:
     qs = parse_qs(parsed.query)
     for key in ("filename", "file", "name"):
         if qs.get(key):
-            return sanitize_filename(qs[key][0])
-    return name or f"download_{int(time.time())}.safetensors"
+            candidate = sanitize_filename(qs[key][0])
+            if "." in candidate:
+                return candidate
+    return f"download_{int(time.time())}.safetensors"
 
 
 def filename_from_headers(headers, fallback: str) -> str:
@@ -370,7 +370,7 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/categories":
             if not require_auth(self):
                 return
-            json_response(self, {"categories": [asdict(c) | {"target_dir": str(c.target_dir)} for c in CATEGORIES.values()]})
+            json_response(self, {"categories": [dict(asdict(c), target_dir=str(c.target_dir)) for c in CATEGORIES.values()]})
             return
         if parsed.path == "/api/jobs":
             if not require_auth(self):
