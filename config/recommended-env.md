@@ -33,10 +33,19 @@ NEO_IMAGE_PROFILE_ID=comfyui_local
 NEO_VIDEO_PROFILE_ID=video.comfyui
 NEO_TEXT_PROFILE_ID=local_koboldcpp_text
 
+# Comfy custom-node hardening
+COMFY_NODE_GROUPS=core,image,video,finish
+INSTALL_CUSTOM_NODE_REQUIREMENTS=1
+RUN_CUSTOM_NODE_INSTALLERS=0
+NEO_SCENE_DIRECTOR_MODE=symlink
+CHECK_COMFY_NODES=0
+COMFY_NODES_STRICT=0
+
 # Update policy. Keep disabled for reproducible pods.
 AUTO_UPDATE_NEO=0
 AUTO_UPDATE_COMFY=0
 AUTO_UPDATE_CUSTOM_NODES=0
+AUTO_UPDATE_NEO_SCENE_DIRECTOR_LINK=1
 
 # Exposed app ports
 NEO_HOST=0.0.0.0
@@ -103,6 +112,70 @@ Disable runtime profile patching only for debugging:
 
 ```bash
 NEO_PATCH_PROFILES=0
+```
+
+## Comfy custom-node hardening
+
+Phase C installs Neo's recommended Comfy custom nodes from:
+
+```text
+/opt/neo-runpod/config/comfy-node-manifest.tsv
+```
+
+Default enabled groups:
+
+```bash
+COMFY_NODE_GROUPS=core,image,video,finish
+```
+
+Use a smaller set when testing image-only pods:
+
+```bash
+COMFY_NODE_GROUPS=core,image
+```
+
+Requirement installation is enabled by default:
+
+```bash
+INSTALL_CUSTOM_NODE_REQUIREMENTS=1
+```
+
+Custom node `install.py` execution is disabled by default because those installers are third-party code:
+
+```bash
+RUN_CUSTOM_NODE_INSTALLERS=0
+```
+
+Neo's own Scene Director node is synced from the Neo checkout into ComfyUI:
+
+```bash
+NEO_SCENE_DIRECTOR_MODE=symlink
+```
+
+Other values:
+
+```bash
+NEO_SCENE_DIRECTOR_MODE=copy
+NEO_SCENE_DIRECTOR_MODE=skip
+```
+
+Node audit reports are written under:
+
+```text
+/workspace/logs/comfy_nodes_status.tsv
+/workspace/logs/comfy_nodes_check.tsv
+```
+
+Enable node checks in healthcheck when debugging:
+
+```bash
+CHECK_COMFY_NODES=1
+```
+
+Make missing required nodes fail the check only when you want strict validation:
+
+```bash
+COMFY_NODES_STRICT=1
 ```
 
 ## Port notes
