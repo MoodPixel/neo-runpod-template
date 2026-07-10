@@ -86,6 +86,28 @@ If visibility stays private, RunPod may fail with:
 IMAGE_AUTH_ERROR: unauthorized
 ```
 
+## Phase G.2 — Python dev headers for Comfy/Triton
+
+A first RunPod boot exposed a ComfyUI startup crash while importing `comfy_kitchen` / Triton-generated helpers:
+
+```text
+fatal error: Python.h: No such file or directory
+```
+
+Phase G.2 adds these apt packages to the image:
+
+```text
+python3-dev
+pkg-config
+```
+
+Reason:
+
+- `python3-dev` provides `Python.h` for runtime/native Python extension compilation.
+- `pkg-config` helps native package builds discover system library/compiler metadata.
+
+After this patch, rebuild and publish the image again before retesting RunPod.
+
 ## RunPod container image value
 
 Paste this into RunPod **Container image**:
@@ -159,4 +181,4 @@ cat /workspace/logs/healthcheck_summary.env
 
 ## Current status
 
-This phase adds image publishing. It does not prove the image builds successfully until the GitHub Actions workflow has run and passed.
+This phase adds image publishing and the Python development headers required by Comfy/Triton runtime imports. It does not prove the image builds or boots successfully until the GitHub Actions workflow has run and the RunPod pod has been retested.
