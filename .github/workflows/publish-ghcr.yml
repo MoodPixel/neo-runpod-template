@@ -1,0 +1,112 @@
+name: Build and publish GHCR image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - start.sh
+      - neo_download_models.py
+      - scripts/**
+      - config/**
+      - .github/workflows/publish-ghcr.yml
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Extra image tag to publish, for example phase-g or runpod-test
+        required: false
+        default: phase-g
+      push_latest:
+        description: Also push latest tag
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-ghcr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/moodpixel/neo-runpod-template
+
+jobs:
+  build-and-publish:
+    name: Build and publish image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tags
+        id: tags
+        shell: bash
+        env:
+          INPUT_TAG: ${{ github.event.inputs.image_tag }}
+          PUSH_LATEST: ${{ github.event.inputs.push_latest }}
+        run: |
+          set -euo pipefail
+
+          SHORT_SHA="${GITHUB_SHA::12}"
+          TAGS="${IMAGE_NAME}:sha-${SHORT_SHA}"
+
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            TAGS="${TAGS}
+          ${IMAGE_NAME}:phase-g"
+          fi
+
+          if [[ "${GITHUB_REF_NAME}" == "main" && "${PUSH_LATEST:-true}" != "false" ]]; then
+            TAGS="${TAGS}
+          ${IMAGE_NAME}:latest"
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_TAG:-}" ]]; then
+            TAGS="${TAGS}
+          ${IMAGE_NAME}:${INPUT_TAG}"
+          fi
+
+          echo "Resolved tags:"
+          echo "${TAGS}"
+
+          {
+            echo "tags<<EOF"
+            echo "${TAGS}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Print RunPod image names
+        shell: bash
+        run: |
+          echo "Use one of these in RunPod > Container image:"
+          echo "ghcr.io/moodpixel/neo-runpod-template:phase-g"
+          echo "ghcr.io/moodpixel/neo-runpod-template:latest"
+          echo "ghcr.io/moodpixel/neo-runpod-template:sha-${GITHUB_SHA::12}"
