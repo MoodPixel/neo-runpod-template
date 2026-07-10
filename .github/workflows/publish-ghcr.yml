@@ -66,29 +66,26 @@ jobs:
           set -euo pipefail
 
           SHORT_SHA="${GITHUB_SHA::12}"
-          TAGS="${IMAGE_NAME}:sha-${SHORT_SHA}"
+          tags=("${IMAGE_NAME}:sha-${SHORT_SHA}")
 
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            TAGS="${TAGS}
-          ${IMAGE_NAME}:phase-g"
+            tags+=("${IMAGE_NAME}:phase-g")
           fi
 
           if [[ "${GITHUB_REF_NAME}" == "main" && "${PUSH_LATEST:-true}" != "false" ]]; then
-            TAGS="${TAGS}
-          ${IMAGE_NAME}:latest"
+            tags+=("${IMAGE_NAME}:latest")
           fi
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_TAG:-}" ]]; then
-            TAGS="${TAGS}
-          ${IMAGE_NAME}:${INPUT_TAG}"
+            tags+=("${IMAGE_NAME}:${INPUT_TAG}")
           fi
 
           echo "Resolved tags:"
-          echo "${TAGS}"
+          printf '%s\n' "${tags[@]}"
 
           {
             echo "tags<<EOF"
-            echo "${TAGS}"
+            printf '%s\n' "${tags[@]}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
