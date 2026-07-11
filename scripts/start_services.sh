@@ -20,6 +20,7 @@ COMFY_PREVIEW_METHOD="${COMFY_PREVIEW_METHOD:-auto}"
 KOBOLD_HOST="${KOBOLD_HOST:-0.0.0.0}"
 KOBOLD_PORT="${KOBOLD_PORT:-5001}"
 KOBOLD_MODE="${KOBOLD_MODE:-optional}"
+KOBOLD_SUPERVISED="${KOBOLD_SUPERVISED:-0}"
 MODEL_DOWNLOADER_HOST="${MODEL_DOWNLOADER_HOST:-0.0.0.0}"
 MODEL_DOWNLOADER_PORT="${MODEL_DOWNLOADER_PORT:-7861}"
 
@@ -37,18 +38,30 @@ remember_pid() {
   fi
 }
 
+kobold_is_critical() {
+  if [[ "$KOBOLD_MODE" == "required" || "${KOBOLD_STRICT:-0}" == "1" || "$KOBOLD_SUPERVISED" == "1" ]]; then
+    return 0
+  fi
+  return 1
+}
+
 write_kobold_status() {
   local state="$1"
   local detail="${2:-}"
+  local action="${3:-}"
   cat > "$KOBOLD_STATUS_FILE" <<EOF
 KOBOLD_RUNTIME_STATE=$state
 KOBOLD_RUNTIME_DETAIL=$detail
+KOBOLD_RUNTIME_ACTION=$action
 KOBOLD_HOST=$KOBOLD_HOST
 KOBOLD_PORT=$KOBOLD_PORT
 KOBOLDCPP_BIN=$KOBOLDCPP_BIN
 KOBOLD_MODEL=$KOBOLD_MODEL
 KOBOLD_MODE=$KOBOLD_MODE
+KOBOLD_SUPERVISED=$KOBOLD_SUPERVISED
+KOBOLD_STRICT=${KOBOLD_STRICT:-0}
 START_KOBOLD=${START_KOBOLD:-0}
+INSTALL_KOBOLD=${INSTALL_KOBOLD:-0}
 EOF
 }
 
@@ -86,23 +99,23 @@ start_comfy() {
 start_kobold() {
   if [[ "${START_KOBOLD:-0}" != "1" ]]; then
     log "START_KOBOLD=0, skipping KoboldCPP"
-    write_kobold_status "disabled" "START_KOBOLD=0"
+    write_kobold_status "disabled" "START_KOBOLD=0" "Set START_KOBOLD=1 plus KOBOLDCPP_BIN and KOBOLD_MODEL to enable."
     return
   fi
   if [[ ! -x "$KOBOLDCPP_BIN" ]]; then
     log "KoboldCPP binary missing or not executable at $KOBOLDCPP_BIN; skipping KoboldCPP"
-    write_kobold_status "missing_binary" "$KOBOLDCPP_BIN"
+    write_kobold_status "missing_binary" "$KOBOLDCPP_BIN" "Set INSTALL_KOBOLD=1 and KOBOLDCPP_URL to download a binary, or mount/copy an executable to KOBOLDCPP_BIN."
     maybe_fail_required_kobold "missing binary" || return 1
     return
   fi
   if [[ ! -f "$KOBOLD_MODEL" ]]; then
     log "Kobold model missing at $KOBOLD_MODEL; skipping KoboldCPP"
-    write_kobold_status "missing_model" "$KOBOLD_MODEL"
+    write_kobold_status "missing_model" "$KOBOLD_MODEL" "Download a text GGUF into /workspace/neo-models/text and set KOBOLD_MODEL to its full path."
     maybe_fail_required_kobold "missing model" || return 1
     return
   fi
 
-  write_kobold_status "starting" "launching"
+  write_kobold_status "starting" "launching" "Waiting for KoboldCPP API on /v1/models."
   log "Starting KoboldCPP on ${KOBOLD_HOST}:${KOBOLD_PORT} with model $KOBOLD_MODEL"
   "$KOBOLDCPP_BIN" \
     --model "$KOBOLD_MODEL" \
@@ -111,8 +124,12 @@ start_kobold() {
     ${KOBOLD_EXTRA_ARGS:-${KOBOLDCPP_EXTRA_ARGS:-}} \
     > /workspace/logs/koboldcpp.log 2>&1 &
   local kobold_pid="$!"
-  remember_pid "$kobold_pid" 1
-  write_kobold_status "started" "pid=$kobold_pid"
+  local critical="0"
+  if kobold_is_critical; then
+    critical="1"
+  fi
+  remember_pid "$kobold_pid" "$critical"
+  write_kobold_status "started" "pid=$kobold_pid critical=$critical" "Run /opt/neo-runpod/scripts/check_koboldcpp.sh for readiness details."
 }
 
 start_model_downloader() {
@@ -186,6 +203,11 @@ touch /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/
 if [[ "${RUN_STARTUP_HEALTHCHECK:-0}" == "1" && -x /opt/neo-runpod/scripts/wait_for_services.sh ]]; then
   log "Running startup readiness check in background"
   /opt/neo-runpod/scripts/wait_for_services.sh > /workspace/logs/startup_healthcheck.log 2>&1 &
+fi
+
+if [[ "${RUNTIME_DIAGNOSTICS_ON_START:-0}" == "1" && -x /opt/neo-runpod/scripts/runtime_diagnostics.sh ]]; then
+  log "Running one-time runtime diagnostics snapshot in background"
+  /opt/neo-runpod/scripts/runtime_diagnostics.sh > /workspace/logs/runtime_diagnostics_startup.log 2>&1 &
 fi
 
 tail -n +1 -F /workspace/logs/comfyui.log /workspace/logs/koboldcpp.log /workspace/logs/model_downloader.log /workspace/logs/neo_studio.log &
