@@ -10,20 +10,6 @@ log() {
   printf '[runtime-diagnostics] %s\n' "$*"
 }
 
-write_cmd() {
-  local name="$1"
-  shift
-  {
-    printf '$ %q' "$1"
-    shift || true
-    for arg in "$@"; do
-      printf ' %q' "$arg"
-    done
-    printf '\n\n'
-    "$@"
-  } > "$RUN_DIR/$name" 2>&1 || true
-}
-
 check_url() {
   local name="$1"
   local url="$2"
