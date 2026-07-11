@@ -13,7 +13,7 @@ The pod uses `/workspace` as the persistent root:
 /workspace/ComfyUI            # ComfyUI checkout
 /workspace/koboldcpp          # Optional KoboldCPP binary area
 /workspace/neo-models         # Shared persistent model bank
-/workspace/logs               # Service logs
+/workspace/logs               # Service logs and diagnostics
 ```
 
 Neo runtime/user data stays inside:
@@ -38,7 +38,7 @@ Expose port `7860` in RunPod for the Neo Studio UI. Expose `7861` only when you 
 ## Build
 
 ```bash
-docker build -t neo-studio-runpod:phase-f .
+docker build -t neo-studio-runpod:phase-g4 .
 ```
 
 ## Local run smoke test
@@ -50,7 +50,7 @@ docker run --gpus all --rm -it \
   -p 8188:8188 \
   -v neo-workspace:/workspace \
   -e MODEL_PROFILE=none \
-  neo-studio-runpod:phase-f
+  neo-studio-runpod:phase-g4
 ```
 
 Open:
@@ -89,6 +89,7 @@ NEO_PATCH_PROFILES=1
 COMFY_NODE_GROUPS=core,image,video,finish
 NEO_SCENE_DIRECTOR_MODE=symlink
 KOBOLD_MODE=optional
+KOBOLD_SUPERVISED=0
 ```
 
 See [`config/recommended-env.md`](config/recommended-env.md) for the full environment contract.
@@ -245,7 +246,7 @@ GitHub release/direct URLs
 Any direct http/https model file URL
 ```
 
-Tokens:
+Tokens are supplied as runtime environment variables, not baked into the image:
 
 ```bash
 HF_TOKEN=          # sent to huggingface.co URLs
@@ -280,11 +281,15 @@ MODEL_DOWNLOADER_STRICT=1
 
 ## KoboldCPP optional lane
 
-Phase D keeps KoboldCPP disabled by default:
+Phase D introduced the optional lane. Phase G.4 hardens its reports and supervision behavior.
+
+Disabled default:
 
 ```bash
 START_KOBOLD=0
 KOBOLD_MODE=optional
+KOBOLD_STRICT=0
+KOBOLD_SUPERVISED=0
 ```
 
 This is intentional. The pod should still start Neo Studio and ComfyUI when no text model exists. Neo text/assistant/roleplay surfaces can show backend-disconnected diagnostics until a text backend is connected.
@@ -296,6 +301,64 @@ START_KOBOLD=1
 KOBOLDCPP_BIN=/workspace/koboldcpp/koboldcpp-linux-x64
 KOBOLD_MODEL=/workspace/neo-models/text/model.gguf
 ```
+
+To download the binary at startup, also set:
+
+```bash
+INSTALL_KOBOLD=1
+KOBOLDCPP_URL=<direct-linux-koboldcpp-binary-url>
+```
+
+Kobold is only critical when one of these is enabled:
+
+```bash
+KOBOLD_MODE=required
+KOBOLD_STRICT=1
+KOBOLD_SUPERVISED=1
+```
+
+Diagnostics:
+
+```bash
+/opt/neo-runpod/scripts/check_koboldcpp.sh
+/opt/neo-runpod/scripts/kobold_lane_report.sh
+```
+
+Report files:
+
+```text
+/workspace/logs/koboldcpp_status.env
+/workspace/logs/koboldcpp_runtime_status.env
+/workspace/logs/koboldcpp_check.tsv
+/workspace/logs/koboldcpp_check_summary.env
+/workspace/logs/kobold_lane_report.md
+/workspace/logs/kobold_lane_report.tsv
+```
+
+## Runtime diagnostics
+
+Phase G.4 adds a one-command diagnostic snapshot:
+
+```bash
+/opt/neo-runpod/scripts/runtime_diagnostics.sh
+```
+
+It writes:
+
+```text
+/workspace/logs/runtime_diagnostics/<timestamp>
+/workspace/logs/runtime_diagnostics/latest
+```
+
+For Neo-vs-direct-Comfy speed checks, run:
+
+```bash
+/opt/neo-runpod/scripts/trace_generation_timing.sh 240
+```
+
+Then trigger a generation during the trace window.
+
+See [`docs/phase-g4-runtime-diagnostics.md`](docs/phase-g4-runtime-diagnostics.md) for the full diagnosis workflow.
 
 ## Health checks and readiness
 
@@ -351,14 +414,18 @@ Logs are written to:
 /workspace/logs/koboldcpp_status.env
 /workspace/logs/koboldcpp_runtime_status.env
 /workspace/logs/koboldcpp_check.tsv
+/workspace/logs/koboldcpp_check_summary.env
+/workspace/logs/kobold_lane_report.md
 /workspace/logs/healthcheck.tsv
 /workspace/logs/healthcheck_summary.env
 /workspace/logs/wait_for_services.log
+/workspace/logs/runtime_diagnostics/
+/workspace/logs/generation_traces/
 ```
 
 ## Current phase
 
-This is **Phase F**: on-demand model downloader.
+This is **Phase G.4**: runtime diagnostics and Kobold lane hardening.
 
 Included:
 
@@ -374,9 +441,12 @@ Included:
 - Neo Scene Director sync/link into ComfyUI custom_nodes
 - Comfy node audit helper
 - KoboldCPP lane checker
+- Kobold lane markdown/TSV report
 - richer healthcheck helper
 - readiness wait helper
-- optional startup readiness loop
+- runtime diagnostics snapshot helper
+- generation timing trace helper
+- optional startup diagnostics snapshot
 - multi-service launcher
 - recommended environment docs
 - Docker ignore rules
@@ -386,3 +456,4 @@ Deferred to later phases:
 
 - Deeper RunPod image-size optimization
 - Full container build/test validation on GPU hardware
+- Neo-side timing instrumentation if external traces prove the delay is inside Neo polling/output handling
