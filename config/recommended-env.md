@@ -26,6 +26,7 @@ START_KOBOLD=0
 INSTALL_KOBOLD=0
 KOBOLD_MODE=optional
 KOBOLD_STRICT=0
+KOBOLD_SUPERVISED=0
 START_MODEL_DOWNLOADER=1
 INSTALL_CUSTOM_NODES=1
 INSTALL_NEO_MEMORY=1
@@ -66,6 +67,11 @@ HEALTH_WAIT_INTERVAL_SECONDS=5
 CHECK_KOBOLDCPP_LANE=1
 CHECK_KOBOLD_API_REQUIRED=0
 
+# Runtime diagnostics
+RUNTIME_DIAGNOSTICS_ON_START=0
+TRACE_DURATION_SECONDS=240
+TRACE_INTERVAL_SECONDS=1
+
 # Update policy. Keep disabled for reproducible pods.
 AUTO_UPDATE_NEO=0
 AUTO_UPDATE_COMFY=0
@@ -95,7 +101,7 @@ KOBOLD_EXTRA_ARGS=
 
 `MODEL_PROFILE=none` is the safe default. It prepares folders without downloading large model files.
 
-Available model profiles are defined in `neo_download_models.py`. Current useful values include:
+Available model profiles are defined in `neo_download_models.py`. Useful values include:
 
 ```bash
 MODEL_PROFILE=none
@@ -105,7 +111,7 @@ MODEL_PROFILE=rapid_video_core
 MODEL_PROFILE=all
 ```
 
-Use `HF_TOKEN` when a model requires Hugging Face authentication.
+Use `HF_TOKEN` when a model requires Hugging Face authentication. Use `CIVITAI_TOKEN` for authenticated CivitAI download URLs. These are runtime environment variables and are not baked into the Docker image.
 
 ## Backend profile patching
 
@@ -128,47 +134,22 @@ prompt_captioning -> local_koboldcpp_text
 roleplay          -> local_koboldcpp_text
 ```
 
-Override URLs when services run elsewhere:
-
-```bash
-NEO_COMFY_BASE_URL=http://127.0.0.1:8188
-NEO_KOBOLD_BASE_URL=http://127.0.0.1:5001
-```
-
-Disable runtime profile patching only for debugging:
-
-```bash
-NEO_PATCH_PROFILES=0
-```
-
 ## On-demand model downloader
 
-Phase F adds a separate template-owned downloader UI/API on port `7861`:
-
-```text
-http://<pod-host>:7861
-```
-
-The service is started by default:
+The downloader UI/API runs on port `7861` when enabled:
 
 ```bash
 START_MODEL_DOWNLOADER=1
 MODEL_DOWNLOADER_PORT=7861
 ```
 
-It writes only under the shared model bank:
+It writes only under:
 
 ```text
 /workspace/neo-models
 ```
 
-The category dropdown is driven by:
-
-```text
-/opt/neo-runpod/config/model-download-categories.tsv
-```
-
-Common mappings:
+Common category mappings:
 
 ```text
 checkpoints      -> /workspace/neo-models/ckpt_bank
@@ -188,53 +169,20 @@ GitHub release/direct URLs
 Any direct http/https model file URL
 ```
 
-Auth tokens:
-
-```bash
-HF_TOKEN=          # sent to huggingface.co URLs
-CIVITAI_TOKEN=     # sent to civitai.com URLs
-MODEL_DOWNLOADER_AUTH_HEADER=
-```
-
-If you expose port `7861`, set a UI/API token:
+If you expose port `7861`, set:
 
 ```bash
 MODEL_DOWNLOADER_TOKEN=your-private-token
 ```
 
-The downloader blocks unknown file extensions by default. To allow unusual file names/extensions:
-
-```bash
-MODEL_DOWNLOADER_ALLOW_ANY_EXTENSION=1
-```
-
-Downloader job log:
+Downloader logs:
 
 ```text
 /workspace/logs/model_downloader_jobs.jsonl
 /workspace/logs/model_downloader.log
 ```
 
-By default, the downloader is not a critical supervised service. If it crashes, Neo + Comfy should keep running:
-
-```bash
-MODEL_DOWNLOADER_SUPERVISED=0
-```
-
-Make it critical only when intentionally validating the downloader:
-
-```bash
-MODEL_DOWNLOADER_SUPERVISED=1
-MODEL_DOWNLOADER_STRICT=1
-```
-
 ## Comfy custom-node hardening
-
-Phase C installs Neo's recommended Comfy custom nodes from:
-
-```text
-/opt/neo-runpod/config/comfy-node-manifest.tsv
-```
 
 Default enabled groups:
 
@@ -248,61 +196,28 @@ Use a smaller set when testing image-only pods:
 COMFY_NODE_GROUPS=core,image
 ```
 
-Requirement installation is enabled by default:
-
-```bash
-INSTALL_CUSTOM_NODE_REQUIREMENTS=1
-```
-
-Custom node `install.py` execution is disabled by default because those installers are third-party code:
-
-```bash
-RUN_CUSTOM_NODE_INSTALLERS=0
-```
-
 Neo's own Scene Director node is synced from the Neo checkout into ComfyUI:
 
 ```bash
 NEO_SCENE_DIRECTOR_MODE=symlink
 ```
 
-Other values:
-
-```bash
-NEO_SCENE_DIRECTOR_MODE=copy
-NEO_SCENE_DIRECTOR_MODE=skip
-```
-
-Node audit reports are written under:
+Node audit reports:
 
 ```text
 /workspace/logs/comfy_nodes_status.tsv
 /workspace/logs/comfy_nodes_check.tsv
 ```
 
-Enable node checks in healthcheck when debugging:
-
-```bash
-CHECK_COMFY_NODES=1
-```
-
-Make missing required nodes fail the check only when you want strict validation:
-
-```bash
-COMFY_NODES_STRICT=1
-```
-
 ## KoboldCPP optional text lane
 
-Phase D keeps KoboldCPP disabled by default:
+KoboldCPP is disabled by default:
 
 ```bash
 START_KOBOLD=0
 ```
 
-That means Neo Studio and ComfyUI still boot even when no text model is present. Neo text, assistant, prompt/captioning, and roleplay surfaces will show backend-disconnected diagnostics until a text backend is enabled.
-
-To enable the local text lane, provide both a KoboldCPP executable and a GGUF model:
+To enable local text generation, provide both a KoboldCPP executable and a GGUF model:
 
 ```bash
 START_KOBOLD=1
@@ -318,47 +233,84 @@ KOBOLDCPP_URL=https://example.com/koboldcpp-linux-x64
 KOBOLDCPP_SHA256=
 ```
 
-Use `KOBOLDCPP_SHA256` when you want checksum verification for the downloaded binary.
-
-The lane is optional by default:
+The lane is optional by default. Even when `START_KOBOLD=1`, it does not stop Neo + Comfy unless strict/supervised mode is enabled:
 
 ```bash
 KOBOLD_MODE=optional
 KOBOLD_STRICT=0
+KOBOLD_SUPERVISED=0
 ```
 
-To intentionally fail startup/checks when Kobold is missing:
+Make Kobold critical only when intentionally validating it:
 
 ```bash
 KOBOLD_MODE=required
 # or
 KOBOLD_STRICT=1
+# or
+KOBOLD_SUPERVISED=1
 ```
 
-Pass extra KoboldCPP launch flags through:
-
-```bash
-KOBOLD_EXTRA_ARGS="--your-flags-here"
-```
-
-Kobold lane reports are written under:
+Kobold lane reports:
 
 ```text
 /workspace/logs/koboldcpp_status.env
 /workspace/logs/koboldcpp_runtime_status.env
 /workspace/logs/koboldcpp_check.tsv
+/workspace/logs/koboldcpp_check_summary.env
+/workspace/logs/kobold_lane_report.md
+/workspace/logs/kobold_lane_report.tsv
+```
+
+Useful commands:
+
+```bash
+/opt/neo-runpod/scripts/check_koboldcpp.sh
+/opt/neo-runpod/scripts/kobold_lane_report.sh
+```
+
+## Runtime diagnostics and generation timing
+
+One-shot runtime snapshot:
+
+```bash
+/opt/neo-runpod/scripts/runtime_diagnostics.sh
+```
+
+Snapshot output:
+
+```text
+/workspace/logs/runtime_diagnostics/<timestamp>
+/workspace/logs/runtime_diagnostics/latest
+```
+
+Live Neo-vs-Comfy timing trace:
+
+```bash
+/opt/neo-runpod/scripts/trace_generation_timing.sh 240
+```
+
+Trace output:
+
+```text
+/workspace/logs/generation_traces/<timestamp>
+/workspace/logs/generation_traces/latest
+```
+
+Enable one automatic startup snapshot only when debugging:
+
+```bash
+RUNTIME_DIAGNOSTICS_ON_START=1
 ```
 
 ## Health checks and readiness
-
-Phase E provides two health layers:
 
 ```bash
 /opt/neo-runpod/scripts/healthcheck.sh
 /opt/neo-runpod/scripts/wait_for_services.sh
 ```
 
-`healthcheck.sh` checks enabled services and writes:
+Health reports:
 
 ```text
 /workspace/logs/healthcheck.tsv
@@ -387,30 +339,10 @@ Comfy custom-node manifest check
 Comfy /object_info check
 ```
 
-To run the readiness loop manually:
-
-```bash
-/opt/neo-runpod/scripts/wait_for_services.sh
-```
-
-Readiness loop controls:
-
-```bash
-HEALTH_WAIT_TIMEOUT_SECONDS=300
-HEALTH_WAIT_INTERVAL_SECONDS=5
-```
-
-To run the readiness loop automatically after services start, enable:
+To run the readiness loop automatically after services start:
 
 ```bash
 RUN_STARTUP_HEALTHCHECK=1
-```
-
-This runs in the background and writes:
-
-```text
-/workspace/logs/startup_healthcheck.log
-/workspace/logs/wait_for_services.log
 ```
 
 ## Port notes
