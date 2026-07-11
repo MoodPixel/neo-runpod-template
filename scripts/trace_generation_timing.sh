@@ -69,18 +69,17 @@ if [[ -d "${NEO_ROOT:-/workspace/Neo_Studio_V2}/neo_data/logs/image" ]]; then
   find "${NEO_ROOT:-/workspace/Neo_Studio_V2}/neo_data/logs/image" -maxdepth 1 -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS\t%p\n' 2>/dev/null | sort | tail -n 80 > "$OUT_DIR/neo_image_log_index.tsv" || true
 fi
 
-cat > "$OUT_DIR/README.md" <<EOF
-# Generation timing trace
-
-Started: $(grep '^TRACE_STARTED_AT=' "$OUT_DIR/trace_metadata.env" | cut -d= -f2-)
-Duration: ${DURATION_SECONDS}s
-
+{
+  printf '# Generation timing trace\n\n'
+  printf 'Started: %s\n' "$(grep '^TRACE_STARTED_AT=' "$OUT_DIR/trace_metadata.env" | cut -d= -f2-)"
+  printf 'Duration: %ss\n\n' "$DURATION_SECONDS"
+  cat <<'EOF'
 ## How to read this
 
-- `gpu_samples.csv` shows GPU utilization and VRAM during the trace window.
-- `before_comfyui.log.tail` and `after_comfyui.log.tail` show whether Comfy itself spent the extra time.
-- `before_neo_studio.log.tail` and `after_neo_studio.log.tail` show whether Neo waited after Comfy completed.
-- `service_status.tsv` confirms Neo/Comfy/Kobold readiness at trace end.
+- gpu_samples.csv shows GPU utilization and VRAM during the trace window.
+- before_comfyui.log.tail and after_comfyui.log.tail show whether Comfy itself spent the extra time.
+- before_neo_studio.log.tail and after_neo_studio.log.tail show whether Neo waited after Comfy completed.
+- service_status.tsv confirms Neo/Comfy/Kobold readiness at trace end.
 
 ## Diagnosis rule
 
@@ -88,6 +87,8 @@ Duration: ${DURATION_SECONDS}s
 - Comfy log fast + Neo late = Neo polling/output-copy/metadata side is slower.
 - GPU idle while Neo says running = UI/provider state tracking delay.
 EOF
+} > "$OUT_DIR/README.md"
 
+mkdir -p "${TRACE_OUTPUT_DIR_ROOT:-/workspace/logs/generation_traces}"
 ln -sfn "$OUT_DIR" "${TRACE_OUTPUT_DIR_ROOT:-/workspace/logs/generation_traces}/latest" 2>/dev/null || true
 log "Done: $OUT_DIR"
