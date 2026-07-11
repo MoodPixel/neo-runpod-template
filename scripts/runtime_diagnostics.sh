@@ -84,11 +84,10 @@ if [[ -x /opt/neo-runpod/scripts/kobold_lane_report.sh ]]; then
   KOBOLD_LANE_REPORT_MD="$RUN_DIR/kobold_lane_report.md" KOBOLD_LANE_REPORT_TSV="$RUN_DIR/kobold_lane_report.tsv" /opt/neo-runpod/scripts/kobold_lane_report.sh > "$RUN_DIR/kobold_lane_report.log" 2>&1 || true
 fi
 
-cat > "$RUN_DIR/README.md" <<EOF
-# Runtime diagnostics snapshot
-
-Created: $TS
-
+{
+  printf '# Runtime diagnostics snapshot\n\n'
+  printf 'Created: %s\n\n' "$TS"
+  cat <<'EOF'
 ## Key files
 
 - service_http.tsv — HTTP health probe status codes
@@ -102,7 +101,7 @@ Created: $TS
 
 1. Run a direct Comfy generation and note Comfy's own elapsed time.
 2. Run the same generation through Neo.
-3. Compare `comfyui.log.tail`, `neo_studio.log.tail`, and GPU usage.
+3. Compare comfyui.log.tail, neo_studio.log.tail, and GPU usage.
 4. If Comfy finishes fast but Neo UI finishes late, the delay is in Neo polling/output handling.
 5. If Comfy itself runs longer, Neo is submitting a heavier or different workflow/params.
 
@@ -112,6 +111,7 @@ For live sampling during one generation, run:
 /opt/neo-runpod/scripts/trace_generation_timing.sh 240
 ```
 EOF
+} > "$RUN_DIR/README.md"
 
 ln -sfn "$RUN_DIR" "$OUT_DIR/latest"
 log "Done: $RUN_DIR"
