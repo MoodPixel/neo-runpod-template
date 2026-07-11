@@ -61,53 +61,44 @@ else
   record "api" "not_ready" "$KOBOLD_URL http_status=$http_status$err"
 fi
 
-cat > "$REPORT_MD" <<EOF
-# KoboldCPP lane report
-
-Generated: $(ts)
-
-## Current config
-
-| Key | Value |
-|---|---|
-| START_KOBOLD | ${START_KOBOLD:-0} |
-| INSTALL_KOBOLD | ${INSTALL_KOBOLD:-0} |
-| KOBOLD_MODE | ${KOBOLD_MODE:-optional} |
-| KOBOLD_STRICT | ${KOBOLD_STRICT:-0} |
-| KOBOLD_SUPERVISED | ${KOBOLD_SUPERVISED:-0} |
-| KOBOLDCPP_BIN | $KOBOLDCPP_BIN |
-| KOBOLD_MODEL | $KOBOLD_MODEL |
-| KOBOLD API | $KOBOLD_URL |
-
-## Fast diagnosis
-
-EOF
+{
+  printf '# KoboldCPP lane report\n\n'
+  printf 'Generated: %s\n\n' "$(ts)"
+  printf '## Current config\n\n'
+  printf '| Key | Value |\n|---|---|\n'
+  printf '| START_KOBOLD | %s |\n' "${START_KOBOLD:-0}"
+  printf '| INSTALL_KOBOLD | %s |\n' "${INSTALL_KOBOLD:-0}"
+  printf '| KOBOLD_MODE | %s |\n' "${KOBOLD_MODE:-optional}"
+  printf '| KOBOLD_STRICT | %s |\n' "${KOBOLD_STRICT:-0}"
+  printf '| KOBOLD_SUPERVISED | %s |\n' "${KOBOLD_SUPERVISED:-0}"
+  printf '| KOBOLDCPP_BIN | %s |\n' "$KOBOLDCPP_BIN"
+  printf '| KOBOLD_MODEL | %s |\n' "$KOBOLD_MODEL"
+  printf '| KOBOLD API | %s |\n\n' "$KOBOLD_URL"
+  printf '## Fast diagnosis\n\n'
+} > "$REPORT_MD"
 
 if [[ ! -x "$KOBOLDCPP_BIN" ]]; then
-  cat >> "$REPORT_MD" <<EOF
-- Missing KoboldCPP binary.
-- Fix: set `INSTALL_KOBOLD=1` and `KOBOLDCPP_URL` to a direct Linux binary URL, or copy an executable to `$KOBOLDCPP_BIN`.
-
-EOF
+  {
+    printf -- '- Missing KoboldCPP binary.\n'
+    printf -- '- Fix: set INSTALL_KOBOLD=1 and KOBOLDCPP_URL to a direct Linux binary URL, or copy an executable to %s.\n\n' "$KOBOLDCPP_BIN"
+  } >> "$REPORT_MD"
 fi
 
 if [[ ! -f "$KOBOLD_MODEL" ]]; then
-  cat >> "$REPORT_MD" <<EOF
-- Missing configured text GGUF model.
-- Fix: download a `.gguf` text model into `/workspace/neo-models/text`, then set `KOBOLD_MODEL` to the exact file path.
-
-EOF
+  {
+    printf -- '- Missing configured text GGUF model.\n'
+    printf -- '- Fix: download a .gguf text model into /workspace/neo-models/text, then set KOBOLD_MODEL to the exact file path.\n\n'
+  } >> "$REPORT_MD"
 fi
 
 if [[ "$http_status" != "200" ]]; then
-  cat >> "$REPORT_MD" <<EOF
-- Kobold API is not ready at `$KOBOLD_URL`.
-- Check `/workspace/logs/koboldcpp.log` after binary/model are present.
-
-EOF
+  {
+    printf -- '- Kobold API is not ready at %s.\n' "$KOBOLD_URL"
+    printf -- '- Check /workspace/logs/koboldcpp.log after binary/model are present.\n\n'
+  } >> "$REPORT_MD"
 fi
 
-cat >> "$REPORT_MD" <<EOF
+cat >> "$REPORT_MD" <<'EOF'
 ## Useful commands
 
 ```bash
@@ -119,12 +110,10 @@ tail -n 200 /workspace/logs/koboldcpp.log
 find /workspace/neo-models/text -maxdepth 2 -type f -iname '*.gguf' -print
 ```
 
-## Report files
-
-```text
-$REPORT_MD
-$REPORT_TSV
-```
 EOF
+{
+  printf '## Report files\n\n'
+  printf '```text\n%s\n%s\n```\n' "$REPORT_MD" "$REPORT_TSV"
+} >> "$REPORT_MD"
 
 printf '[kobold-lane-report] Wrote %s and %s\n' "$REPORT_MD" "$REPORT_TSV"
