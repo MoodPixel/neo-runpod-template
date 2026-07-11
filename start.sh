@@ -36,12 +36,13 @@ log "Model root:        $MODEL_ROOT"
 log "Profile:           ${MODEL_PROFILE:-none}"
 log "Comfy URL:         $NEO_COMFY_BASE_URL"
 log "Kobold URL:        $NEO_KOBOLD_BASE_URL"
-log "Kobold mode:       ${KOBOLD_MODE:-optional} / START_KOBOLD=${START_KOBOLD:-0}"
+log "Kobold mode:       ${KOBOLD_MODE:-optional} / START_KOBOLD=${START_KOBOLD:-0} / supervised=${KOBOLD_SUPERVISED:-0} / strict=${KOBOLD_STRICT:-0}"
 log "Kobold binary:     ${KOBOLDCPP_BIN:-$KOBOLDCPP_ROOT/koboldcpp-linux-x64}"
 log "Kobold model:      ${KOBOLD_MODEL:-/workspace/neo-models/text/model.gguf}"
 log "Model downloader:  ${MODEL_DOWNLOADER_HOST}:${MODEL_DOWNLOADER_PORT} / START_MODEL_DOWNLOADER=${START_MODEL_DOWNLOADER:-1}"
 log "Comfy nodes:       ${COMFY_NODE_GROUPS:-core,image,video,finish}"
 log "Scene Director:    ${NEO_SCENE_DIRECTOR_MODE:-symlink}"
+log "Runtime diag:      RUNTIME_DIAGNOSTICS_ON_START=${RUNTIME_DIAGNOSTICS_ON_START:-0}"
 
 if [[ "${INSTALL_COMFY:-1}" != "0" ]]; then
   /opt/neo-runpod/scripts/install_comfy.sh
@@ -62,6 +63,10 @@ else
 fi
 
 /opt/neo-runpod/scripts/install_koboldcpp.sh
+
+if [[ -x /opt/neo-runpod/scripts/kobold_lane_report.sh ]]; then
+  /opt/neo-runpod/scripts/kobold_lane_report.sh || log "Kobold lane report failed; continuing"
+fi
 
 if [[ "${MODEL_PROFILE:-none}" != "skip" ]]; then
   log "Preparing model folders / downloads via neo_download_models.py"
